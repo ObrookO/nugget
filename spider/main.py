@@ -1,5 +1,11 @@
 # 爬取后端下所有的标签，以及每个标签下的所有文章
 import requests
+import os
+import sys
+
+path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, path)
+
 from model.model import Model
 from datetime import datetime
 from pymysql import escape_string
@@ -143,7 +149,8 @@ class MainSpider:
 
 
 if __name__ == '__main__':
-    spider = MainSpider()
-    tags = spider.get_tags()
-    for item in tags:
-        spider.get_article_lists(item[2])
+    pass
+    # spider = MainSpider()
+    # tags = spider.get_tags()
+    # for item in tags:
+    #     spider.get_article_lists(item[2])
