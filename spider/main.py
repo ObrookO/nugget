@@ -143,7 +143,8 @@ class MainSpider:
 
 
 if __name__ == '__main__':
-    spider = MainSpider()
-    tags = spider.get_tags()
-    for item in tags:
-        spider.get_article_lists(item[2])
+    pass
+    # spider = MainSpider()
+    # tags = spider.get_tags()
+    # for item in tags:
+    #     spider.get_article_lists(item[2])
