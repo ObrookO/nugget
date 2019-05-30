@@ -1,3 +1,3 @@
 import sys
 
-sys.path.append(r'../model')
+sys.path.append('/usr/local/nginx/html/nugget')
