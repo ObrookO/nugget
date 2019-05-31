@@ -39,7 +39,7 @@ class PostSpider:
 
     def get_article(self):
         article = self.redis.rpop('article')
-        while article:
+        if article is not None:
             article = json.loads(article)
             content = self.get_detail(article['url'])
 
@@ -79,4 +79,5 @@ class PostSpider:
 
 
 if __name__ == '__main__':
-    post = PostSpider()
+    while True:
+        post = PostSpider()

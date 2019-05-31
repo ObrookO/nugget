@@ -12,6 +12,7 @@ from pymysql import escape_string
 import json
 import configparser
 import redis
+import random
 
 
 class MainSpider:
@@ -37,11 +38,6 @@ class MainSpider:
         # 连接数据库
         self.model = Model(db['host'], db['port'], db['user'], db['password'], db['db'])
         self.redis = redis.Redis()
-        # 连接RabbitMQ
-        # self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-        # self.channel = self.connection.channel()
-        # self.exchange_name = 'article'
-        # self.channel.exchange_declare(exchange=self.exchange_name)
 
     # 获取所有的标签
     def get_tags(self):
@@ -86,7 +82,7 @@ class MainSpider:
         return tags
 
     # 获取文章列表
-    def get_article_lists(self, category_id, after=''):
+    def get_article_lists(self, category_id, order, after=''):
         headers = {
             "X-Agent": "Juejin/Web"
         }
@@ -98,7 +94,7 @@ class MainSpider:
                 "category": "5562b419e4b00c57d9b94ae2",
                 "first": 20,
                 "after": after,
-                "order": "HOTTEST"
+                "order": order
             },
             "extensions": {
                 "query": {
@@ -150,11 +146,12 @@ class MainSpider:
                     print('文章 ', article['id'], ' 已存在！')
 
         if page_info['hasNextPage'] is True:
-            self.get_article_lists(category_id, page_info['endCursor'])
+            self.get_article_lists(category_id, order, page_info['endCursor'])
 
 
 if __name__ == '__main__':
     spider = MainSpider()
     tags = spider.get_tags()
+    order = ['POPULAR', 'HOTTEST', 'MONTHLY_HOTTEST']
     for item in tags:
-        spider.get_article_lists(item[2])
+        spider.get_article_lists(item[2], random.choice(order))
