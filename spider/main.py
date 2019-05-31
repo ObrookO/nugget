@@ -10,8 +10,8 @@ from model.model import Model
 from datetime import datetime
 from pymysql import escape_string
 import json
-import pika
 import configparser
+import redis
 
 
 class MainSpider:
@@ -21,7 +21,8 @@ class MainSpider:
 
         # 读取配置信息
         config = configparser.ConfigParser()
-        config.read('../conf/spider.conf', encoding='utf-8')
+        config_path = path + '/conf/spider.conf'
+        config.read(config_path, encoding='utf-8')
         # 获取当前环境
         env = config.get('main', 'env')
         mysql_section = 'mysql_' + env
@@ -35,11 +36,12 @@ class MainSpider:
 
         # 连接数据库
         self.model = Model(db['host'], db['port'], db['user'], db['password'], db['db'])
+        self.redis = redis.Redis()
         # 连接RabbitMQ
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-        self.channel = self.connection.channel()
-        self.exchange_name = 'article'
-        self.channel.exchange_declare(exchange=self.exchange_name)
+        # self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        # self.channel = self.connection.channel()
+        # self.exchange_name = 'article'
+        # self.channel.exchange_declare(exchange=self.exchange_name)
 
     # 获取所有的标签
     def get_tags(self):
@@ -139,18 +141,20 @@ class MainSpider:
                         article['id'], article['originalUrl'], escape_string(article['title']), category_id, tags, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                     self.model.commit(insert_sql)
 
-                    print(article['id'], '插入成功！')
+                    print('文章 ', article['id'], ' 插入成功！')
                     # 把文章id和原始url放入队列中
                     message = json.dumps({'id': article['id'], 'url': article['originalUrl']})
-                    self.channel.basic_publish(exchange=self.exchange_name, routing_key='', body=message, properties=pika.BasicProperties(delivery_mode=2))
+                    self.redis.lpush('article', message)
+                    # self.channel.basic_publish(exchange=self.exchange_name, routing_key='', body=message, properties=pika.BasicProperties(delivery_mode=2))
+                else:
+                    print('文章 ', article['id'], ' 已存在！')
 
         if page_info['hasNextPage'] is True:
             self.get_article_lists(category_id, page_info['endCursor'])
 
 
 if __name__ == '__main__':
-    pass
-    # spider = MainSpider()
-    # tags = spider.get_tags()
-    # for item in tags:
-    #     spider.get_article_lists(item[2])
+    spider = MainSpider()
+    tags = spider.get_tags()
+    for item in tags:
+        spider.get_article_lists(item[2])

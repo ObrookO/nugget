@@ -1,19 +1,26 @@
 # 爬取文章详情
 import requests
-from bs4 import BeautifulSoup
+import os
+import sys
+
+path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, path)
+
 from model.model import Model
+from bs4 import BeautifulSoup
 from pymysql import escape_string
-import pika
 import json
 import re
 import configparser
+import redis
 
 
 class PostSpider:
     def __init__(self):
         # 读取配置信息
         config = configparser.ConfigParser()
-        config.read('../conf/spider.conf', encoding='utf-8')
+        config_path = path + '/conf/spider.conf'
+        config.read(config_path, encoding='utf-8')
         # 获取当前环境
         env = config.get('main', 'env')
         mysql_section = 'mysql_' + env
@@ -27,33 +34,30 @@ class PostSpider:
 
         # 连接数据库
         self.model = Model(db['host'], db['port'], db['user'], db['password'], db['db'])
+        self.redis = redis.Redis()
+        self.get_article()
 
-        # RabbitMQ相关操作
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-        self.channel = self.connection.channel()
-        self.channel.exchange_declare(exchange='article')
-        self.channel.queue_declare(queue='article')
-        self.channel.queue_bind(queue='article', routing_key='', exchange='article')
-        self.channel.basic_consume(queue='article', on_message_callback=self.get_article, auto_ack=True)
-        self.channel.start_consuming()
+    def get_article(self):
+        article = self.redis.rpop('article')
+        while article:
+            article = json.loads(article)
+            content = self.get_detail(article['url'])
 
-    def get_article(self, channel, method, properties, body):
-        article = json.loads(body.decode(encoding='utf-8'))
-        content = self.get_detail(article['url'])
+            # 如果获取不到内容，则在数据库中删除此文章
+            if content is not None:
+                sql = '''
+                update nugget_articles set content = '%s' where out_id = '%s'
+                ''' % (escape_string(content), article['id'])
+            else:
+                sql = '''
+                delete from nugget_articles where out_id = '%s'
+                ''' % article['id']
 
-        # 如果获取不到内容，则在数据库中删除此文章
-        if content is not None:
-            sql = '''
-            update nugget_articles set content = '%s' where out_id = '%s'
-            ''' % (escape_string(content), article['id'])
-        else:
-            sql = '''
-            delete from nugget_articles where out_id = '%s'
-            ''' % article['id']
+            res = self.model.commit(sql)
+            if res:
+                print('获取 ' + article['url'] + ' 内容成功')
 
-        res = self.model.commit(sql)
-        if res:
-            print('获取' + article['url'] + '内容成功')
+            self.get_article()
 
     def get_detail(self, url):
         headers = {
