@@ -3,16 +3,17 @@ import requests
 import os
 import sys
 
-path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, path)
-
-from model.model import Model
 from datetime import datetime
 from pymysql import escape_string
 import json
 import configparser
 import redis
 import random
+
+path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, path)
+
+from model.model import Model
 
 
 class MainSpider:
@@ -35,9 +36,14 @@ class MainSpider:
             'db': config.get(mysql_section, 'db')
         }
 
+        r = {
+            'host': config.get('redis', 'host'),
+            'port': config.get('redis', 'port')
+        }
+
         # 连接数据库
         self.model = Model(db['host'], db['port'], db['user'], db['password'], db['db'])
-        self.redis = redis.Redis()
+        self.redis = redis.Redis(r['host'], r['port'])
 
     # 获取所有的标签
     def get_tags(self):

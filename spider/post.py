@@ -2,10 +2,6 @@
 import requests
 import os
 import sys
-
-path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, path)
-
 from model.model import Model
 from bs4 import BeautifulSoup
 from pymysql import escape_string
@@ -13,6 +9,9 @@ import json
 import re
 import configparser
 import redis
+
+path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, path)
 
 
 class PostSpider:
