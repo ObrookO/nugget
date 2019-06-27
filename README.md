@@ -32,4 +32,4 @@
 执行以下命令，运行项目：
 
      python3 spider/main.py                 # 爬取文章
-     python3 spider/post.py                 # 爬取文章内容        
+     python3 spider/post.py                 # 爬取文章内容
